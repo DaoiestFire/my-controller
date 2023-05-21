@@ -8,7 +8,7 @@
 
 #### 使用教程
 
-##### V0.1
+##### V0.1.0
 ```shell
 cd cmd
 go mod tidy
@@ -18,3 +18,14 @@ go build -o mc
 ```
 可以看到环境上的pod已经打印出来了
 ![](images/v0.1.png)
+
+##### V0.1。1
+```shell
+cd cmd
+go mod tidy
+go build -o mc
+# 指定自己的apiserver的ip与端口，指定证书与密钥
+./mc --ca-file /opt/kubernetes/ssl/ca.pem --cert-file /opt/kubernetes/ssl/admin.pem --key-file /opt/kubernetes/ssl/admin-key.pem --host 10.0.4.15 --port 6443
+```
+可以看到环境上的pod与ds已经打印出来了
+![](images/v0.1.1.png)
