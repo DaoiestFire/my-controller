@@ -3,7 +3,8 @@
 #### 介绍
 基于client-go实现对k8s集群的访问，这个简易的controller对新创建的pod增加一行annotation
 
-1. v0.1: 实现使用证书实例化RESTClient并访问apiserver，打印环境上kube-system命名空间下的pod
+1. v0.1.0: 实现使用证书实例化RESTClient并访问apiserver，打印环境上kube-system命名空间下的pod
+2. v0.1.1: 实现使用证书实例化ClientSet并访问apiserver，打印环境上kube-system命名空间下的pod和kube-flannel下的ds
 
 #### 使用教程
 

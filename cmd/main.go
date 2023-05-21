@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"net"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -39,30 +38,22 @@ func main() {
 		TLSClientConfig: tlsConfig,
 	}
 
-	config.APIPath = "api"
-	config.GroupVersion = &corev1.SchemeGroupVersion
-	config.NegotiatedSerializer = scheme.Codecs
-
-	rest.AddUserAgent(&config, "my-controller")
-
-	restClient, err := rest.RESTClientFor(&config)
+	clientSet, err := kubernetes.NewForConfig(rest.AddUserAgent(&config, "my-cotroller"))
 	if err != nil {
 		panic(err)
 	}
 
-	result := &corev1.PodList{}
-
-	err = restClient.Get().
-		Namespace("kube-system").
-		Resource("pods").
-		VersionedParams(&metav1.ListOptions{Limit: 100}, scheme.ParameterCodec).
-		Do(context.TODO()).Into(result)
-	if err != nil {
-		panic(err)
-	}
+	podsResult, err := clientSet.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
 
 	fmt.Printf("namespace\t status\t\t name\n")
-	for _, d := range result.Items {
-		fmt.Printf("%v\t %v\t %v\n", d.Namespace, d.Status.Phase, d.Name)
+	for _, p := range podsResult.Items {
+		fmt.Printf("%v\t %v\t %v\n", p.Namespace, p.Status.Phase, p.Name)
+	}
+
+	dsResult, err := clientSet.AppsV1().DaemonSets("kube-flannel").List(context.TODO(), metav1.ListOptions{})
+
+	fmt.Printf("namespace\t name\n")
+	for _, d := range dsResult.Items {
+		fmt.Printf("%v\t %v\n", d.Namespace, d.Name)
 	}
 }
