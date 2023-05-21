@@ -25,6 +25,8 @@ func main() {
 	flag.StringVar(&caFile, "ca-file", "", "specify cafile path")
 	flag.StringVar(&certFile, "cert-file", "", "specify certfile path")
 	flag.StringVar(&keyFile, "key-file", "", "specify keyfile path")
+	flag.StringVar(&host, "host", "", "specify kube master ip")
+	flag.StringVar(&port, "port", "", "specify kube matser port")
 	flag.Parse()
 
 	tlsConfig := rest.TLSClientConfig{}
