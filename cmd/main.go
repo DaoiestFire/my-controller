@@ -44,6 +44,9 @@ func main() {
 	}
 
 	podsResult, err := clientSet.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Printf("namespace\t status\t\t name\n")
 	for _, p := range podsResult.Items {
@@ -51,6 +54,9 @@ func main() {
 	}
 
 	dsResult, err := clientSet.AppsV1().DaemonSets("kube-flannel").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Printf("namespace\t name\n")
 	for _, d := range dsResult.Items {
