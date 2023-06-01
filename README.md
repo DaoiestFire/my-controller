@@ -19,7 +19,7 @@ go build -o mc
 可以看到环境上的pod已经打印出来了
 ![](images/v0.1.png)
 
-##### V0.1。1
+##### V0.1.1
 ```shell
 cd cmd
 go mod tidy
