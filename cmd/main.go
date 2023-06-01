@@ -25,7 +25,7 @@ func main() {
 	flag.StringVar(&certFile, "cert-file", "", "specify certfile path")
 	flag.StringVar(&keyFile, "key-file", "", "specify keyfile path")
 	flag.StringVar(&host, "host", "", "specify kube master ip")
-	flag.StringVar(&port, "port", "", "specify kube matser port")
+	flag.StringVar(&port, "port", "", "specify kube master port")
 	flag.Parse()
 
 	tlsConfig := rest.TLSClientConfig{}
@@ -38,7 +38,7 @@ func main() {
 		TLSClientConfig: tlsConfig,
 	}
 
-	clientSet, err := kubernetes.NewForConfig(rest.AddUserAgent(&config, "my-cotroller"))
+	clientSet, err := kubernetes.NewForConfig(rest.AddUserAgent(&config, "my-controller"))
 	if err != nil {
 		panic(err)
 	}
