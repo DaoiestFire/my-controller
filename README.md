@@ -5,6 +5,8 @@
 
 1. v0.1.0: 实现使用证书实例化RESTClient并访问apiserver，打印环境上kube-system命名空间下的pod
 2. v0.1.1: 实现使用证书实例化ClientSet并访问apiserver，打印环境上kube-system命名空间下的pod和kube-flannel下的ds
+3. v1.0.0: 实现一个简易的controller，当pod增加时，打印增加事件，并将pod增加到workqueue，仅处理携带label"mycontroller:mycontroller"的pod。
+controller更新pod，为pod增加一个新label"mycontroller:processed"。接受删除事件，打印到控制台。
 
 #### 使用教程
 
@@ -29,3 +31,5 @@ go build -o mc
 ```
 可以看到环境上的pod与ds已经打印出来了
 ![](images/v0.1.1.png)
+
+##### v1.0.0
