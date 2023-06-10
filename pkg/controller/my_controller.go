@@ -101,7 +101,7 @@ func (mc *MyController) syncPod(key string) error {
 
 	_, err = mc.kubeClient.CoreV1().Pods(ns).Update(context.TODO(), &pod, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("update pod [%v] failed", key)
+		return fmt.Errorf("update pod [%v] failed ---> [%v]", key, err)
 	}
 
 	return nil
