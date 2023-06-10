@@ -1,12 +1,12 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
+	"k8s.io/client-go/informers"
+	"ljw/mycontroller/pkg/controller"
 	"net"
+	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -43,23 +43,16 @@ func main() {
 		panic(err)
 	}
 
-	podsResult, err := clientSet.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+	informerClient, err := kubernetes.NewForConfig(rest.AddUserAgent(&config, "informer"))
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("namespace\t status\t\t name\n")
-	for _, p := range podsResult.Items {
-		fmt.Printf("%v\t %v\t %v\n", p.Namespace, p.Status.Phase, p.Name)
-	}
+	informerFactory := informers.NewSharedInformerFactory(informerClient, time.Second)
 
-	dsResult, err := clientSet.AppsV1().DaemonSets("kube-flannel").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
+	go controller.NewMyController(informerFactory.Core().V1().Pods(), clientSet)
 
-	fmt.Printf("namespace\t name\n")
-	for _, d := range dsResult.Items {
-		fmt.Printf("%v\t %v\n", d.Namespace, d.Name)
-	}
+	ch := make(chan struct{})
+
+	<-ch
 }
