@@ -40,9 +40,16 @@ func NewMyController(podInformer coreinformers.PodInformer, kubeclient clientset
 	selector := &metav1.LabelSelector{
 		MatchLabels: map[string]string{"mycontroller": "mycontroller"},
 	}
+	targetSelector, _ := metav1.LabelSelectorAsSelector(selector)
+
+	mc.targetSelector = targetSelector
+
+	selector = &metav1.LabelSelector{
+		MatchLabels: map[string]string{"processed": "processed"},
+	}
 	resultSelector, _ := metav1.LabelSelectorAsSelector(selector)
 
-	mc.selector = resultSelector
+	mc.resultSelector = resultSelector
 	return mc
 }
 
@@ -52,7 +59,8 @@ type MyController struct {
 	podLister      corelisters.PodLister
 	queue          workqueue.RateLimitingInterface
 
-	selector labels.Selector
+	targetSelector labels.Selector
+	resultSelector labels.Selector
 }
 
 func (mc *MyController) Run(ctx context.Context) {
@@ -89,20 +97,23 @@ func (mc *MyController) syncPod(key string) error {
 	pod := *sharedPod.DeepCopy()
 	podLabels := pod.GetLabels()
 	// 如果匹配了把processed:processed标签加上
-	if mc.isTargetPod(&pod) {
+	if mc.isTargetPod(&pod) && !mc.isResultPod(&pod) {
 		podLabels["processed"] = "processed"
 		klog.Infof("pod [%v] add processed:processed label", key)
-	} else {
-		// 反之，将标签删除
+	} else if !mc.isTargetPod(&pod) && mc.isResultPod(&pod) {
 		delete(podLabels, "processed")
 		klog.Infof("pod [%v] delete processed:processed label", key)
+	} else {
+		return nil
 	}
 	pod.SetLabels(podLabels)
 
 	_, err = mc.kubeClient.CoreV1().Pods(ns).Update(context.TODO(), &pod, metav1.UpdateOptions{})
 	if err != nil {
+		mc.queue.Add(key)
 		return fmt.Errorf("update pod [%v] failed ---> [%v]", key, err)
 	}
+	klog.Infof("update pod [%v] success", key)
 
 	return nil
 }
@@ -200,5 +211,9 @@ func (mc *MyController) processNextWorkItem(ctx context.Context) bool {
 }
 
 func (mc *MyController) isTargetPod(pod *v1.Pod) bool {
-	return mc.selector.Matches(labels.Set(pod.GetLabels()))
+	return mc.targetSelector.Matches(labels.Set(pod.GetLabels()))
+}
+
+func (mc *MyController) isResultPod(pod *v1.Pod) bool {
+	return mc.resultSelector.Matches(labels.Set(pod.GetLabels()))
 }
