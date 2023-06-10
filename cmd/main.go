@@ -48,12 +48,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	informerFactory := informers.NewSharedInformerFactory(informerClient, time.Second)
 
 	ch := make(chan struct{})
 	defer close(ch)
 	ctx := wait.ContextForChannel(ch)
 
+	informerFactory := informers.NewSharedInformerFactory(informerClient, time.Second)
+	informerFactory.Start(ch)
 	go controller.NewMyController(informerFactory.Core().V1().Pods(), clientSet).Run(ctx)
 
 	<-ch
