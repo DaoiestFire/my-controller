@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+
 	"time"
 
 	"k8s.io/api/core/v1"
@@ -14,16 +15,12 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 )
 
 const (
 	baseDelay = 1 * time.Second
 	maxDelay  = 5 * time.Second
-)
-
-var (
-	infoFormat  = fmt.Sprintf("%v INFO message[%%v]\n", time.Now().String())
-	errorFormat = fmt.Sprintf("%v ERROR message[%%v]\n", time.Now().String())
 )
 
 func NewMyController(podInformer coreinformers.PodInformer, kubeclient clientset.Interface) *MyController {
@@ -60,11 +57,11 @@ type MyController struct {
 
 func (mc *MyController) Run(ctx context.Context) {
 	defer mc.queue.ShutDown()
-	fmt.Printf(infoFormat, "Starting my pod controller")
-	defer fmt.Printf(infoFormat, "Shutting down my pod controller")
+	klog.Info("Starting my pod controller")
+	defer klog.Info("Shutting down my pod controller")
 
 	if !cache.WaitForNamedCacheSync("pod", ctx.Done(), mc.podStoreSynced) {
-		fmt.Printf(errorFormat, "sync for pod failed")
+		klog.Info("sync for pod failed")
 		return
 	}
 
@@ -94,11 +91,11 @@ func (mc *MyController) syncPod(key string) error {
 	// 如果匹配了把processed:processed标签加上
 	if mc.isTargetPod(&pod) {
 		podLabels["processed"] = "processed"
-		fmt.Printf(infoFormat, fmt.Sprintf("pod [%v] add processed:processed label", key))
+		klog.Infof("pod [%v] add processed:processed label", key)
 	} else {
 		// 反之，将标签删除
 		delete(podLabels, "processed")
-		fmt.Printf(infoFormat, fmt.Sprintf("pod [%v] delete processed:processed label", key))
+		klog.Infof("pod [%v] delete processed:processed label", key)
 	}
 	pod.SetLabels(podLabels)
 
@@ -123,18 +120,18 @@ func (mc *MyController) addPod(obj interface{}) {
 	// 获取pod的key。即”namespace：pod name“
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod)
 	if err != nil {
-		fmt.Printf(errorFormat, fmt.Sprintf("get key for obj [%v] failed", key))
+		klog.Errorf("get key for obj [%v] failed", key)
 		return
 	}
 
 	// 这里去匹配pod的labels
 	if !mc.isTargetPod(pod) {
-		fmt.Printf(infoFormat, fmt.Sprintf("[%v] is not target pod", key))
+		klog.Infof("[%v] is not target pod", key)
 		return
 	}
 
 	mc.queue.Add(key)
-	fmt.Printf(infoFormat, fmt.Sprintf("add pod [%v] to queue success", key))
+	klog.Infof("add pod [%v] to queue success", key)
 }
 
 // 如果一个pod原来没有”mycontroller:mycontroller“标签，后续修改其内容将标签加上了，就需要处理，置入处理队列中
@@ -142,11 +139,6 @@ func (mc *MyController) addPod(obj interface{}) {
 func (mc *MyController) updatePod(old interface{}, cur interface{}) {
 	oldPod := old.(*v1.Pod)
 	curPod := cur.(*v1.Pod)
-
-	if oldPod == nil || curPod == nil {
-		fmt.Printf(infoFormat, "exist nil pod, not update")
-		return
-	}
 
 	//如果已经删除了就不处理
 	if curPod.DeletionTimestamp != nil {
@@ -157,7 +149,7 @@ func (mc *MyController) updatePod(old interface{}, cur interface{}) {
 	// 获取pod的key。即”namespace：pod name“
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(curPod)
 	if err != nil {
-		fmt.Printf(errorFormat, fmt.Sprintf("get key for obj [%v] failed", key))
+		klog.Errorf("get key for obj [%v] failed", key)
 		return
 	}
 
@@ -165,12 +157,12 @@ func (mc *MyController) updatePod(old interface{}, cur interface{}) {
 	isCurMatch := mc.isTargetPod(curPod)
 
 	if (isOldMatch && isCurMatch) || (!isOldMatch && !isCurMatch) {
-		fmt.Printf(infoFormat, fmt.Sprintf("pod [%v] no need process", key))
+		klog.Infof("pod [%v] no need process", key)
 		return
 	}
 
 	mc.queue.Add(key)
-	fmt.Printf(infoFormat, fmt.Sprintf("add pod [%v] to queue success,isOldMatch[%v] isCurMatch [%v]", key, isOldMatch, isCurMatch))
+	klog.Infof("add pod [%v] to queue success,isOldMatch[%v] isCurMatch [%v]", key, isOldMatch, isCurMatch)
 }
 
 // 删除pod就打印日志即可
@@ -179,11 +171,11 @@ func (mc *MyController) deletePod(obj interface{}) {
 	// 获取pod的key。即”namespace：pod name“
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod)
 	if err != nil {
-		fmt.Printf(errorFormat, fmt.Sprintf("get key for obj [%v] failed", key))
+		klog.Errorf("get key for obj [%v] failed", key)
 		return
 	}
 
-	fmt.Printf(infoFormat, fmt.Sprintf("pod [%v] is deleted", key))
+	klog.Infof("pod [%v] is deleted", key)
 }
 
 func (mc *MyController) worker(ctx context.Context) {
@@ -199,11 +191,11 @@ func (mc *MyController) processNextWorkItem(ctx context.Context) bool {
 	defer mc.queue.Done(key)
 
 	if err := mc.syncPod(key.(string)); err != nil {
-		fmt.Printf(errorFormat, fmt.Sprintf("process pod [%v] failed ---> [%v]", key, err))
+		klog.Errorf("process pod [%v] failed ---> [%v]", key, err)
 		return false
 	}
 
-	fmt.Printf(infoFormat, fmt.Sprintf("process pod [%v] success", key))
+	klog.Infof("process pod [%v] success", key)
 	return true
 }
 
