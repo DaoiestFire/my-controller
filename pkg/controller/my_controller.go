@@ -22,8 +22,8 @@ const (
 )
 
 var (
-	infoFormat  = fmt.Sprintf("%v INFO message[%%v]", time.Now().String())
-	errorFormat = fmt.Sprintf("%v ERROR message[%%v]", time.Now().String())
+	infoFormat  = fmt.Sprintf("%v INFO message[%%v]\n", time.Now().String())
+	errorFormat = fmt.Sprintf("%v ERROR message[%%v]\n", time.Now().String())
 )
 
 func NewMyController(podInformer coreinformers.PodInformer, kubeclient clientset.Interface) *MyController {
