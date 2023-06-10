@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"ljw/mycontroller/pkg/controller"
 	"net"
@@ -47,12 +48,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	informerFactory := informers.NewSharedInformerFactory(informerClient, time.Second)
 
-	go controller.NewMyController(informerFactory.Core().V1().Pods(), clientSet)
-
 	ch := make(chan struct{})
+	ctx := wait.ContextForChannel(ch)
+
+	go controller.NewMyController(informerFactory.Core().V1().Pods(), clientSet).Run(ctx)
 
 	<-ch
 }
