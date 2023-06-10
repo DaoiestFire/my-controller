@@ -4,12 +4,10 @@ import (
 	"flag"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
-	"ljw/mycontroller/pkg/controller"
-	"net"
-	"time"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"ljw/mycontroller/pkg/controller"
+	"net"
 )
 
 var (
@@ -53,9 +51,10 @@ func main() {
 	defer close(ch)
 	ctx := wait.ContextForChannel(ch)
 
-	informerFactory := informers.NewSharedInformerFactory(informerClient, time.Second)
-	informerFactory.Start(ch)
+	informerFactory := informers.NewSharedInformerFactory(informerClient, 0)
 	go controller.NewMyController(informerFactory.Core().V1().Pods(), clientSet).Run(ctx)
+
+	informerFactory.Start(ch)
 
 	<-ch
 }
