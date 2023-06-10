@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-
 	"time"
 
 	"k8s.io/api/core/v1"
@@ -31,12 +30,14 @@ func NewMyController(podInformer coreinformers.PodInformer, kubeclient clientset
 	mc.podStoreSynced = podInformer.Informer().HasSynced
 	mc.podLister = podInformer.Lister()
 
+	// 监听资源的事件，添加对应的处理函数
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    mc.addPod,
 		UpdateFunc: mc.updatePod,
 		DeleteFunc: mc.deletePod,
 	})
 
+	// 创建两个标签选择器，用来判断pod是否携带对应标签
 	selector := &metav1.LabelSelector{
 		MatchLabels: map[string]string{"mycontroller": "mycontroller"},
 	}
@@ -68,6 +69,7 @@ func (mc *MyController) Run(ctx context.Context) {
 	klog.Info("Starting my pod controller")
 	defer klog.Info("Shutting down my pod controller")
 
+	// 等待缓存同步完成
 	if !cache.WaitForNamedCacheSync("pod", ctx.Done(), mc.podStoreSynced) {
 		klog.Info("sync for pod failed")
 		return
@@ -79,6 +81,7 @@ func (mc *MyController) Run(ctx context.Context) {
 
 }
 
+// queue中对象的实际处理逻辑
 func (mc *MyController) syncPod(key string) error {
 	ns, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
@@ -96,11 +99,12 @@ func (mc *MyController) syncPod(key string) error {
 	// 深拷贝，避免修改缓存中的对象
 	pod := *sharedPod.DeepCopy()
 	podLabels := pod.GetLabels()
-	// 如果匹配了把processed:processed标签加上
 	if mc.isTargetPod(&pod) && !mc.isResultPod(&pod) {
+		// 如果pod有标签”mycontroller:mycontroller“但是没有”processed:processed“就将”processed:processed“加上
 		podLabels["processed"] = "processed"
 		klog.Infof("pod [%v] add processed:processed label", key)
 	} else if !mc.isTargetPod(&pod) && mc.isResultPod(&pod) {
+		// 如果pod没有标签”mycontroller:mycontroller“但是有”processed:processed“就将”processed:processed“删除
 		delete(podLabels, "processed")
 		klog.Infof("pod [%v] delete processed:processed label", key)
 	} else {
@@ -176,7 +180,7 @@ func (mc *MyController) updatePod(old interface{}, cur interface{}) {
 	klog.Infof("add pod [%v] to queue success,isOldMatch[%v] isCurMatch [%v]", key, isOldMatch, isCurMatch)
 }
 
-// 删除pod就打印日志即可
+// 删除pod打印日志即可
 func (mc *MyController) deletePod(obj interface{}) {
 	pod := obj.(*v1.Pod)
 	// 获取pod的key。即”namespace：pod name“
@@ -194,6 +198,7 @@ func (mc *MyController) worker(ctx context.Context) {
 	}
 }
 
+// 从队列中取一个item进程处理，并标记为完成
 func (mc *MyController) processNextWorkItem(ctx context.Context) bool {
 	key, quit := mc.queue.Get()
 	if quit {
@@ -210,10 +215,12 @@ func (mc *MyController) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
+// 判断一个pod是否包含标签 ”mycontroller:mycontroller“
 func (mc *MyController) isTargetPod(pod *v1.Pod) bool {
 	return mc.targetSelector.Matches(labels.Set(pod.GetLabels()))
 }
 
+// 判断一个pod是否包含标签 ”processed:processed“
 func (mc *MyController) isResultPod(pod *v1.Pod) bool {
 	return mc.resultSelector.Matches(labels.Set(pod.GetLabels()))
 }
