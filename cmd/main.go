@@ -51,6 +51,7 @@ func main() {
 	informerFactory := informers.NewSharedInformerFactory(informerClient, time.Second)
 
 	ch := make(chan struct{})
+	defer close(ch)
 	ctx := wait.ContextForChannel(ch)
 
 	go controller.NewMyController(informerFactory.Core().V1().Pods(), clientSet).Run(ctx)

@@ -68,6 +68,8 @@ func (mc *MyController) Run(ctx context.Context) {
 		return
 	}
 
+	fmt.Printf(infoFormat, "sync pod success")
+
 	go wait.UntilWithContext(ctx, mc.worker, time.Second)
 
 	<-ctx.Done()
