@@ -129,7 +129,7 @@ func (mc *MyController) addPod(obj interface{}) {
 
 	// 这里去匹配pod的labels
 	if !mc.isTargetPod(pod) {
-		fmt.Printf(errorFormat, fmt.Sprintf("[%v] is not target pod", key))
+		fmt.Printf(infoFormat, fmt.Sprintf("[%v] is not target pod", key))
 		return
 	}
 
@@ -142,6 +142,12 @@ func (mc *MyController) addPod(obj interface{}) {
 func (mc *MyController) updatePod(old interface{}, cur interface{}) {
 	oldPod := old.(*v1.Pod)
 	curPod := cur.(*v1.Pod)
+
+	if oldPod == nil || curPod == nil {
+		fmt.Printf(infoFormat, "exist nil pod, not update")
+		return
+	}
+
 	//如果已经删除了就不处理
 	if curPod.DeletionTimestamp != nil {
 		mc.deletePod(curPod)
@@ -160,6 +166,7 @@ func (mc *MyController) updatePod(old interface{}, cur interface{}) {
 
 	if (isOldMatch && isCurMatch) || (!isOldMatch && !isCurMatch) {
 		fmt.Printf(infoFormat, fmt.Sprintf("pod [%v] no need process", key))
+		return
 	}
 
 	mc.queue.Add(key)
@@ -192,11 +199,11 @@ func (mc *MyController) processNextWorkItem(ctx context.Context) bool {
 	defer mc.queue.Done(key)
 
 	if err := mc.syncPod(key.(string)); err != nil {
-		fmt.Printf(errorFormat, "process pod [%v] failed ---> [%v]", key, err)
+		fmt.Printf(errorFormat, fmt.Sprintf("process pod [%v] failed ---> [%v]", key, err))
 		return false
 	}
 
-	fmt.Printf(infoFormat, "process pod [%v] success", key)
+	fmt.Printf(infoFormat, fmt.Sprintf("process pod [%v] success", key))
 	return true
 }
 
